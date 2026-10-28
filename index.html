@@ -165,6 +165,22 @@ header .top{display:flex;align-items:center;justify-content:space-between;gap:12
 .nequi-num .btn{padding:9px 14px;font-size:14px}
 .qr-nota{margin:0;font-size:13px;color:var(--muted);text-align:center}
 @media (prefers-reduced-motion:reduce){.menu{animation:none}.hamb span{transition:none}}
+
+/* ===== QR en pantalla completa para escanear ===== */
+.menu-wrap{display:flex;gap:8px}
+.qr-btn{width:44px;height:44px;border-radius:12px;border:0;background:var(--yellow);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+.qr-btn svg{width:24px;height:24px}
+.qr-btn:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.menu{top:calc(100% + 8px)}
+.qr-full{position:fixed;inset:0;z-index:40;background:#ffffff;color:#0b1a3f;display:flex;align-items:center;justify-content:center;
+  padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:fadeIn .2s ease both}
+.qr-full-in{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;text-align:center}
+.qr-full img{width:min(88vw,62vh,560px);height:auto;image-rendering:pixelated}
+.qr-t{margin:0 0 8px;font-family:var(--display);font-size:clamp(22px,6vw,32px);color:#5b0f5e}
+.qr-n{margin:10px 0 0;font-weight:800;font-size:clamp(17px,4.6vw,22px);text-transform:uppercase;letter-spacing:.04em}
+.qr-num{margin:0;font-family:var(--display);font-size:clamp(22px,6.5vw,34px);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.qr-v{margin:4px 0 0;font-size:13px;color:#5c6688}
+.qr-cerrar{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:max(14px,env(safe-area-inset-right,0px));width:48px;height:48px;border-radius:50%;border:2px solid #0b1a3f;background:#fff;color:#0b1a3f;font-size:20px;font-weight:800;cursor:pointer}
 </style>
 </head>
 <body>
@@ -173,6 +189,7 @@ header .top{display:flex;align-items:center;justify-content:space-between;gap:12
     <div class="top">
       <div class="eyebrow">Uniagustiniana · Control de boletas</div>
       <div class="menu-wrap">
+        <button class="qr-btn" id="qrBtn" type="button" aria-label="Mostrar QR de Nequi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM18 18h3v3h-3zM18 14h3v2M14 19h2v2" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
         <button class="hamb" id="menuBtn" type="button" aria-label="Menú" aria-haspopup="true" aria-expanded="false" aria-controls="menu">
           <span></span><span></span><span></span>
         </button>
@@ -218,7 +235,17 @@ header .top{display:flex;align-items:center;justify-content:space-between;gap:12
   <div class="backdrop" id="backdrop"></div>
   <div class="card" id="sheetIn" role="dialog" aria-modal="true" aria-labelledby="shTitle"></div>
 </div>
+<div class="qr-full" id="qrFull" hidden role="dialog" aria-modal="true" aria-label="QR de Nequi">
+  <button class="qr-cerrar" id="qrCerrar" type="button" aria-label="Cerrar">✕</button>
+  <div class="qr-full-in">
+    <p class="qr-t">Paga con Nequi</p>
+    <img src="nequi-qr.png?v=7" alt="Código QR de Nequi a nombre de Julian Sarmiento">
+    <p class="qr-n">Julian Sarmiento</p>
+    <p class="qr-num">3223808103</p>
+    <p class="qr-v">Boleta $15.000 · toca la ✕ para cerrar</p>
+  </div>
+</div>
 <div class="toast" id="toast" hidden></div>
-<script type="module" src="app.js?v=6"></script>
+<script type="module" src="app.js?v=7"></script>
 </body>
 </html>

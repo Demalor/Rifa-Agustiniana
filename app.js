@@ -254,7 +254,23 @@ function menuAbierto(v) { menu.hidden = !v; menuBtn.setAttribute("aria-expanded"
 menuBtn.onclick = e => { e.stopPropagation(); menuAbierto(menu.hidden); };
 document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.target)) menuAbierto(false); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !menu.hidden) { menuAbierto(false); menuBtn.focus(); } });
-$("verQR").onclick = () => { menuAbierto(false); abrir(QR); };
+// QR a pantalla completa, fondo blanco para que otro celular lo escanee fácil
+let wakeLock = null;
+async function mostrarQR() {
+  menuAbierto(false);
+  $("qrFull").hidden = false; document.body.classList.add("modal");
+  $("qrCerrar").focus();
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (e) { wakeLock = null; }
+}
+function ocultarQR() {
+  $("qrFull").hidden = true;
+  if (!current) document.body.classList.remove("modal");
+  try { wakeLock?.release(); } catch (e) {} wakeLock = null;
+}
+$("qrBtn").onclick = mostrarQR;
+$("verQR").onclick = mostrarQR;
+$("qrCerrar").onclick = ocultarQR;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("qrFull").hidden) ocultarQR(); });
 
 /* ---------- Escrituras ---------- */
 async function reservar(n) {
