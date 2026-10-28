@@ -120,6 +120,7 @@ function hero(n, e, titulo, sub, extra = "") {
 function drawSheet(fresh) {
   const n = current, e = estado(n), d = data[n] || {}, el = $("sheetIn");
   if (!n) return;
+  if (n === QR) { if (fresh) drawQR(); return; }
 
   // Pantalla de resultado: no se toca con las actualizaciones en vivo
   if (resultado) {
@@ -209,6 +210,51 @@ function textoError(e) {
   if (c.includes("unavailable") || !navigator.onLine) return "No hay conexión a internet. Revisa tu señal e inténtalo de nuevo.";
   return "Algo falló al guardar (" + (c || (e && e.message) || "error desconocido") + ").";
 }
+
+/* ---------- QR de Nequi ---------- */
+const QR = "QR";
+const NEQUI = "3223808103";
+function drawQR() {
+  const el = $("sheetIn"); el.dataset.state = "qr";
+  el.innerHTML = `<div class="hero">
+      <button class="btn ghost x" type="button" id="cerrar" aria-label="Cerrar">✕</button>
+      <h2 id="shTitle" style="margin-top:6px">Paga con Nequi</h2>
+      <p>Boleta de ${fmt(PRECIO)} · escanea el código desde la app de Nequi</p>
+    </div>
+    <div class="body">
+      <div class="qr-box"><img src="nequi-qr.png?v=6" alt="Código QR de Nequi para pagar la rifa" id="qrImg"></div>
+      <div class="nequi-num"><span>Nequi<br><b>${NEQUI}</b></span><button class="btn ghost" type="button" id="copiarNequi">Copiar número</button></div>
+      <p class="qr-nota">Después de pagar, envía el comprobante a quien te vendió el número.</p>
+      <div class="actions"><button class="btn primary" type="button" id="bajarQR">Descargar QR</button></div>
+    </div>`;
+  $("qrImg").onerror = () => { $("qrImg").parentElement.innerHTML = '<div class="qr-falta">El QR todavía no está cargado.</div>'; $("bajarQR").hidden = true; };
+  $("cerrar").onclick = cerrar;
+  $("copiarNequi").onclick = async () => {
+    try { await navigator.clipboard.writeText(NEQUI); toast("Número de Nequi copiado"); }
+    catch (e) { toast("No se pudo copiar. El número es " + NEQUI); }
+  };
+  $("bajarQR").onclick = async () => {
+    try {
+      const blob = await (await fetch("nequi-qr.png?v=6")).blob();
+      bajarBlob(blob, "qr-nequi-rifa.png"); toast("QR descargado");
+    } catch (e) { toast("No se pudo descargar el QR"); }
+  };
+}
+
+function bajarBlob(blob, nombre) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+/* ---------- Menú ---------- */
+const menu = $("menu"), menuBtn = $("menuBtn");
+function menuAbierto(v) { menu.hidden = !v; menuBtn.setAttribute("aria-expanded", String(v)); if (v) menu.querySelector("button").focus(); }
+menuBtn.onclick = e => { e.stopPropagation(); menuAbierto(menu.hidden); };
+document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.target)) menuAbierto(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !menu.hidden) { menuAbierto(false); menuBtn.focus(); } });
+$("verQR").onclick = () => { menuAbierto(false); abrir(QR); };
 
 /* ---------- Escrituras ---------- */
 async function reservar(n) {
@@ -335,20 +381,18 @@ async function generarImagen() {
 
 $("descargar").onclick = async () => {
   const btn = $("descargar");
-  btn.disabled = true; btn.textContent = "Generando…";
+  const original = btn.innerHTML;
+  btn.disabled = true; btn.lastChild.textContent = "Generando imagen…";
   try {
     const blob = await generarImagen();
     const h = new Date();
     const nombre = `rifa-numeros-${h.getFullYear()}-${pad(h.getMonth() + 1)}-${pad(h.getDate())}-${pad(h.getHours())}${pad(h.getMinutes())}.png`;
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = nombre;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    bajarBlob(blob, nombre);
     toast("Imagen descargada");
   } catch (e) {
     toast("No se pudo generar la imagen");
   } finally {
-    btn.disabled = false; btn.textContent = "Descargar imagen";
+    btn.disabled = false; btn.innerHTML = original; menuAbierto(false);
   }
 };
 

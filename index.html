@@ -140,12 +140,48 @@ input[type=text]:disabled,input[type=tel]:disabled,.seg input:disabled+label{opa
 @media (prefers-reduced-motion:reduce){.btn .spin,.card.entrar,.card.salir-arriba,.card.salir-abajo,.backdrop,.res-icon.ok{animation:none!important}}
 
 
+
+/* ===== Menú hamburguesa ===== */
+header .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.menu-wrap{position:relative}
+.hamb{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;cursor:pointer;padding:0}
+.hamb span{display:block;width:20px;height:2px;border-radius:2px;background:var(--yellow);transition:transform .2s,opacity .2s}
+.hamb[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamb[aria-expanded="true"] span:nth-child(2){opacity:0}
+.hamb[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.hamb:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.menu{position:absolute;right:0;top:calc(100% + 8px);z-index:15;min-width:250px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 14px 40px #000a;display:flex;flex-direction:column;animation:menuIn .18s ease both;transform-origin:top right}
+@keyframes menuIn{from{opacity:0;transform:scale(.95) translateY(-4px)}}
+.menu button{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;color:var(--fg);font:inherit;font-weight:600;font-size:15px;padding:13px 12px;border-radius:10px;cursor:pointer}
+.menu button:hover,.menu button:focus-visible{background:var(--cell);outline:none}
+.menu button:disabled{opacity:.6;cursor:wait}
+.menu svg{width:22px;height:22px;color:var(--yellow);flex:none}
+/* ===== Tarjeta QR ===== */
+.qr-box{background:#fff;border-radius:18px;padding:14px;display:grid;place-items:center;width:min(100%,320px);margin:0 auto}
+.qr-box img{width:100%;height:auto;display:block;border-radius:6px}
+.qr-falta{color:#0b1a3f;text-align:center;font-weight:600;padding:30px 10px}
+.nequi-num{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--cell);border-radius:12px;padding:12px 14px}
+.nequi-num b{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.03em;color:var(--yellow);font-variant-numeric:tabular-nums}
+.nequi-num .btn{padding:9px 14px;font-size:14px}
+.qr-nota{margin:0;font-size:13px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:reduce){.menu{animation:none}.hamb span{transition:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Uniagustiniana · Control de boletas</div>
+    <div class="top">
+      <div class="eyebrow">Uniagustiniana · Control de boletas</div>
+      <div class="menu-wrap">
+        <button class="hamb" id="menuBtn" type="button" aria-label="Menú" aria-haspopup="true" aria-expanded="false" aria-controls="menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu" id="menu" role="menu" hidden>
+          <button type="button" role="menuitem" id="verQR"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM18 18h3v3h-3zM18 14h3v2M14 19h2v2" fill="none" stroke="currentColor" stroke-width="2"/></svg>Ver QR de Nequi</button>
+          <button type="button" role="menuitem" id="descargar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Descargar imagen del tablero</button>
+        </div>
+      </div>
+    </div>
     <h1>Rifa<small>¡Juntos por nuestro sueño!</small></h1>
     <div class="meta">
       <span class="chip">Premio <b>$300.000</b></span>
@@ -171,7 +207,6 @@ input[type=text]:disabled,input[type=tel]:disabled,.seg input:disabled+label{opa
 
   <div class="toolbar">
     <input id="buscar" type="search" placeholder="Buscar por comprador o vendedor…" aria-label="Buscar">
-    <button class="btn primary" id="descargar" type="button">Descargar imagen</button>
   </div>
 
   <div class="board" id="board" aria-label="Tablero de números 00 a 99"></div>
@@ -184,6 +219,6 @@ input[type=text]:disabled,input[type=tel]:disabled,.seg input:disabled+label{opa
   <div class="card" id="sheetIn" role="dialog" aria-modal="true" aria-labelledby="shTitle"></div>
 </div>
 <div class="toast" id="toast" hidden></div>
-<script type="module" src="app.js?v=5"></script>
+<script type="module" src="app.js?v=6"></script>
 </body>
 </html>
