@@ -64,42 +64,93 @@ function toast(t) {
 }
 function setStatus(t, err) { const s = $("status"); s.textContent = t; s.classList.toggle("err", !!err); }
 
-/* ---------- Hoja inferior ---------- */
-function abrir(n) { current = n; drawSheet(true); $("sheet").hidden = false; render(); }
-function cerrar() { current = null; $("sheet").hidden = true; render(); }
+/* ---------- Pantalla del número ---------- */
+// resultado: null | { tipo: "ok" | "ocupado" | "error", titulo, msg }
+let resultado = null, borrador = null, formError = "";
+
+function abrir(n) {
+  current = n; resultado = null; borrador = null; formError = ""; confirming = false;
+  drawSheet(true); $("sheet").hidden = false; document.body.classList.add("modal");
+  $("sheet").scrollTop = 0; render();
+}
+function cerrar() {
+  if (busy) return; // no cerrar a mitad de una operación
+  current = null; resultado = null; $("sheet").hidden = true; document.body.classList.remove("modal"); render();
+}
 document.addEventListener("keydown", e => { if (e.key === "Escape" && current) cerrar(); });
 
-function drawSheet(fresh) {
-  if (fresh) confirming = false;
-  const n = current, e = estado(n), d = data[n] || {}, el = $("sheetIn");
-  const key = n + "|" + e + "|" + confirming;
-  // No redibujar el formulario mientras alguien escribe
-  if (!fresh && el.dataset.state === key && !e) return;
-  if (!fresh && el.dataset.state === key && e && el.dataset.v === JSON.stringify(d)) return;
-  el.dataset.state = key; el.dataset.v = JSON.stringify(d);
+function leerFormulario() {
+  if (!$("fComprador")) return borrador;
+  return {
+    comprador: $("fComprador").value.trim(),
+    telefono: $("fTel").value.trim(),
+    vendedor: $("fVendedor").value.trim(),
+    estado: (document.querySelector('input[name="est"]:checked') || {}).value || "pendiente"
+  };
+}
 
-  const head = `<div class="sh-head"><div class="big ${e === "pendiente" ? "pend" : e === "pagado" ? "pago" : ""}">${n}</div>
-    <div><h2 id="shTitle">${e === "pagado" ? "Pagado" : e === "pendiente" ? "Apartado · pendiente" : "Número libre"}</h2>
-    <p>${e ? "Vendido por " + esc(d.vendedor || "—") : "Boleta de " + fmt(PRECIO)}</p></div>
-    <button class="btn ghost x" type="button" id="cerrar" aria-label="Cerrar">✕</button></div>`;
+function hero(n, e, titulo, sub, extra = "") {
+  return `<div class="hero ${e === "pendiente" ? "pend" : e === "pagado" ? "pago" : ""}">
+    <button class="btn ghost x" type="button" id="cerrar" aria-label="Cerrar" ${busy ? "disabled" : ""}>✕</button>
+    ${extra}
+    <div class="hero-num" aria-hidden="true">${n}</div>
+    <h2 id="shTitle">${titulo}</h2>
+    <p>${sub}</p>
+  </div>`;
+}
+
+function drawSheet(fresh) {
+  const n = current, e = estado(n), d = data[n] || {}, el = $("sheetIn");
+  if (!n) return;
+
+  // Pantalla de resultado: no se toca con las actualizaciones en vivo
+  if (resultado) {
+    if (!fresh && el.dataset.state === "res") return;
+    el.dataset.state = "res";
+    const r = resultado;
+    const icono = r.tipo === "ok" ? "✓" : r.tipo === "ocupado" ? "✕" : "!";
+    const botones = r.tipo === "ok"
+      ? `<button class="btn primary" id="rOk" type="button">Listo</button>`
+      : r.tipo === "ocupado"
+        ? `<button class="btn primary" id="rOtro" type="button">Elegir otro número</button><button class="btn ghost" id="rVer" type="button">Ver quién lo tiene</button>`
+        : `<button class="btn primary" id="rRetry" type="button">Intentar de nuevo</button><button class="btn ghost" id="rOk" type="button">Cerrar</button>`;
+    el.innerHTML = hero(n, r.tipo === "ok" ? e : r.tipo === "ocupado" ? (e || "pendiente") : null, r.titulo, r.msg,
+        `<div class="res-icon ${r.tipo}" aria-hidden="true">${icono}</div>`)
+      + `<div class="body"><div class="actions">${botones}</div></div>`;
+    $("rOk") && ($("rOk").onclick = cerrar);
+    $("rOtro") && ($("rOtro").onclick = cerrar);
+    $("rVer") && ($("rVer").onclick = () => { resultado = null; drawSheet(true); });
+    $("rRetry") && ($("rRetry").onclick = () => { resultado = null; drawSheet(true); });
+    $("cerrar").onclick = cerrar;
+    $("rOk") ? $("rOk").focus() : $("rOtro") ? $("rOtro").focus() : $("rRetry").focus();
+    return;
+  }
+
+  const key = n + "|" + e + "|" + confirming + "|" + busy + "|" + formError;
+  // No redibujar el formulario mientras alguien escribe
+  if (!fresh && el.dataset.state === key && (!e || el.dataset.v === JSON.stringify(d))) return;
 
   if (!e) {
-    el.innerHTML = head + `<form id="f" class="in" style="gap:12px">
-      <div class="grid2">
-        <label>Comprador<input type="text" id="fComprador" required autocomplete="off" placeholder="Nombre"></label>
-        <label>Teléfono<input type="tel" id="fTel" autocomplete="off" placeholder="Opcional"></label>
-      </div>
-      <label>Vendido por<input type="text" id="fVendedor" required autocomplete="off" placeholder="Tu nombre" value="${esc(vendedorGuardado)}"></label>
+    if ($("fComprador")) borrador = leerFormulario();
+    const b = borrador || { comprador: "", telefono: "", vendedor: vendedorGuardado, estado: "pendiente" };
+    const dis = busy ? "disabled" : "";
+    el.innerHTML = hero(n, null, "Número libre", "Boleta de " + fmt(PRECIO))
+      + `<form id="f" class="body" novalidate>
+      <label>Comprador<input type="text" id="fComprador" autocomplete="off" placeholder="Nombre de quien compra" value="${esc(b.comprador)}" ${dis}></label>
+      <label>Teléfono<input type="tel" id="fTel" autocomplete="off" inputmode="tel" placeholder="Opcional" value="${esc(b.telefono)}" ${dis}></label>
+      <label>Vendido por<input type="text" id="fVendedor" autocomplete="off" placeholder="Tu nombre" value="${esc(b.vendedor)}" ${dis}></label>
       <div class="seg" role="radiogroup" aria-label="Estado de pago">
-        <input type="radio" name="est" id="eP" value="pendiente" checked><label for="eP"><i style="background:var(--green)"></i>Pendiente de pago</label>
-        <input type="radio" name="est" id="eG" value="pagado"><label for="eG"><i style="background:var(--red)"></i>Ya pagó</label>
+        <input type="radio" name="est" id="eP" value="pendiente" ${b.estado !== "pagado" ? "checked" : ""} ${dis}><label for="eP"><i style="background:var(--green)"></i>Pendiente de pago</label>
+        <input type="radio" name="est" id="eG" value="pagado" ${b.estado === "pagado" ? "checked" : ""} ${dis}><label for="eG"><i style="background:var(--red)"></i>Ya pagó</label>
       </div>
-      <div class="actions"><button class="btn primary" id="fGo">Apartar el ${n}</button></div>
+      ${formError ? `<p class="form-err" role="alert">${esc(formError)}</p>` : ""}
+      <div class="actions"><button class="btn primary" id="fGo" ${dis}>${busy ? '<span class="spin"></span>Apartando…' : "Apartar el " + n}</button></div>
     </form>`;
     $("f").onsubmit = ev => { ev.preventDefault(); reservar(n); };
-    setTimeout(() => $("fComprador") && $("fComprador").focus(), 50);
   } else {
-    el.innerHTML = head + `<dl class="info">
+    const dis = busy ? "disabled" : "";
+    el.innerHTML = hero(n, e, e === "pagado" ? "Pagado" : "Apartado · pendiente de pago", "Vendido por " + esc(d.vendedor || "—"))
+      + `<div class="body"><dl class="info">
         <dt>Comprador</dt><dd>${esc(d.comprador || "—")}</dd>
         <dt>Teléfono</dt><dd>${esc(d.telefono || "—")}</dd>
         <dt>Vendedor</dt><dd>${esc(d.vendedor || "—")}</dd>
@@ -107,32 +158,46 @@ function drawSheet(fresh) {
         ${d.pagadoEn ? `<dt>Pagado</dt><dd>${fecha(d.pagadoEn)}</dd>` : ""}
       </dl>
       ${confirming ? `<div class="confirm"><b>¿Liberar el ${n}?</b><span>Se borra el apartado de ${esc(d.comprador || "este comprador")} y el número vuelve a quedar libre.</span>
-        <div class="actions"><button class="btn red" id="liberarOk" type="button">Sí, liberar</button><button class="btn ghost" id="liberarNo" type="button">Cancelar</button></div></div>`
+        <div class="actions"><button class="btn red" id="liberarOk" type="button" ${dis}>${busy ? '<span class="spin"></span>Liberando…' : "Sí, liberar"}</button><button class="btn ghost" id="liberarNo" type="button" ${dis}>Cancelar</button></div></div>`
       : `<div class="actions">
         ${e === "pendiente"
-          ? `<button class="btn primary" id="pagar" type="button" ${busy ? "disabled" : ""}>Marcar como pagado</button>`
-          : `<button class="btn ghost" id="despagar" type="button" ${busy ? "disabled" : ""}>Volver a pendiente</button>`}
-        <button class="btn ghost" id="liberar" type="button">Liberar número</button></div>`}`;
-    $("pagar") && ($("pagar").onclick = () => cambiar(n, { estado: "pagado", pagadoEn: serverTimestamp() }, "Número " + n + " marcado como pagado"));
-    $("despagar") && ($("despagar").onclick = () => cambiar(n, { estado: "pendiente", pagadoEn: null }, "Número " + n + " vuelve a pendiente"));
-    $("liberar") && ($("liberar").onclick = () => { confirming = true; drawSheet(); });
-    $("liberarNo") && ($("liberarNo").onclick = () => { confirming = false; drawSheet(); });
-    $("liberarOk") && ($("liberarOk").onclick = () => liberar(n));
+          ? `<button class="btn primary" id="pagar" type="button" ${dis}>${busy ? '<span class="spin"></span>Guardando…' : "Marcar como pagado"}</button>`
+          : `<button class="btn ghost" id="despagar" type="button" ${dis}>${busy ? '<span class="spin"></span>Guardando…' : "Volver a pendiente"}</button>`}
+        <button class="btn ghost" id="liberar" type="button" ${dis}>Liberar número</button></div>`}</div>`;
+    $("pagar") && ($("pagar").onclick = () => cambiar(n, { estado: "pagado", pagadoEn: serverTimestamp() },
+      { titulo: "¡Pago registrado!", msg: `El ${n} de ${esc(d.comprador || "este comprador")} quedó como pagado.` }));
+    $("despagar") && ($("despagar").onclick = () => cambiar(n, { estado: "pendiente", pagadoEn: null },
+      { titulo: "Vuelve a pendiente", msg: `El ${n} quedó otra vez como pendiente de pago.` }));
+    $("liberar") && ($("liberar").onclick = () => { confirming = true; drawSheet(true); });
+    $("liberarNo") && ($("liberarNo").onclick = () => { confirming = false; drawSheet(true); });
+    $("liberarOk") && ($("liberarOk").onclick = () => liberar(n, d));
   }
+  el.dataset.state = n + "|" + e + "|" + confirming + "|" + busy + "|" + formError;
+  el.dataset.v = JSON.stringify(d);
   $("cerrar").onclick = cerrar;
+}
+
+function mostrarResultado(r) { resultado = r; if (current) drawSheet(true); }
+function textoError(e) {
+  const c = e && e.code || "";
+  if (c.includes("permission-denied")) return "La base de datos rechazó el cambio (permisos). Revisa las reglas de Firestore.";
+  if (c.includes("unavailable") || !navigator.onLine) return "No hay conexión a internet. Revisa tu señal e inténtalo de nuevo.";
+  return "Algo falló al guardar (" + (c || (e && e.message) || "error desconocido") + ").";
 }
 
 /* ---------- Escrituras ---------- */
 async function reservar(n) {
-  if (!db) { toast("Sin conexión con la base de datos"); return; }
-  const comprador = $("fComprador").value.trim();
-  const vendedor = $("fVendedor").value.trim();
-  if (!comprador || !vendedor) { toast("Falta el comprador o el vendedor"); return; }
-  const telefono = $("fTel").value.trim();
-  const est = document.querySelector('input[name="est"]:checked').value;
-  try { localStorage.setItem("rifa.vendedor", vendedor); vendedorGuardado = vendedor; } catch (e) {}
+  if (busy) return; // evita doble toque
+  const f = leerFormulario(); borrador = f;
+  if (!f.comprador || !f.vendedor) {
+    formError = !f.comprador ? "Escribe el nombre del comprador." : "Escribe quién lo vendió.";
+    drawSheet(true); ($(!f.comprador ? "fComprador" : "fVendedor") || {}).focus?.(); return;
+  }
+  formError = "";
+  if (!db) { mostrarResultado({ tipo: "error", titulo: "Sin conexión", msg: "La página no está conectada a la base de datos. Recarga e inténtalo de nuevo." }); return; }
+  try { localStorage.setItem("rifa.vendedor", f.vendedor); vendedorGuardado = f.vendedor; } catch (e) {}
 
-  const go = $("fGo"); go.disabled = true; go.textContent = "Apartando…";
+  busy = true; drawSheet(true);
   try {
     // Transacción: lee el número y solo lo crea si nadie lo tiene.
     // Si dos personas lo intentan a la vez, Firestore reintenta y la segunda ve que ya existe.
@@ -141,38 +206,44 @@ async function reservar(n) {
       const snap = await tx.get(ref);
       if (snap.exists()) {
         const err = new Error("ocupado");
-        err.vendedor = snap.data().vendedor;
+        err.dato = snap.data();
         throw err;
       }
       tx.set(ref, {
-        numero: n, estado: est, comprador, telefono, vendedor,
+        numero: n, estado: f.estado, comprador: f.comprador, telefono: f.telefono, vendedor: f.vendedor,
         fecha: serverTimestamp(),
-        pagadoEn: est === "pagado" ? serverTimestamp() : null
+        pagadoEn: f.estado === "pagado" ? serverTimestamp() : null
       });
     });
-    toast("Número " + n + " apartado para " + comprador);
+    busy = false; borrador = null;
+    mostrarResultado({ tipo: "ok", titulo: "¡Número apartado!",
+      msg: `El ${n} quedó para ${esc(f.comprador)} · ${f.estado === "pagado" ? "pagado" : "pendiente de pago"}.` });
   } catch (e) {
-    if (e.message === "ocupado") toast("El " + n + " ya lo apartó " + (e.vendedor || "otra persona"));
-    else toast("No se pudo guardar: " + (e.code || e.message));
-  } finally {
-    if (current === n) {
-      if (estado(n)) drawSheet(true);
-      else { const g = $("fGo"); if (g) { g.disabled = false; g.textContent = "Apartar el " + n; } }
+    busy = false;
+    if (e.message === "ocupado") {
+      const d = e.dato || {};
+      mostrarResultado({ tipo: "ocupado", titulo: "Este número ya fue tomado",
+        msg: `${esc(d.vendedor || "Otra persona")} ya apartó el ${n}${d.comprador ? " para " + esc(d.comprador) : ""}. No se guardó tu venta.` });
+    } else {
+      mostrarResultado({ tipo: "error", titulo: "No se pudo apartar", msg: textoError(e) + " Tu venta no quedó guardada." });
     }
   }
 }
 
-async function cambiar(n, patch, msg) {
+async function cambiar(n, patch, ok) {
+  if (busy) return;
   busy = true; drawSheet(true);
-  try { await updateDoc(doc(db, COL, n), patch); toast(msg); }
-  catch (e) { toast("No se pudo guardar: " + (e.code || e.message)); }
-  finally { busy = false; if (current === n) drawSheet(true); }
+  try { await updateDoc(doc(db, COL, n), patch); busy = false; mostrarResultado({ tipo: "ok", ...ok }); }
+  catch (e) { busy = false; mostrarResultado({ tipo: "error", titulo: "No se pudo guardar", msg: textoError(e) }); }
 }
 
-async function liberar(n) {
-  try { await deleteDoc(doc(db, COL, n)); toast("Número " + n + " liberado"); }
-  catch (e) { toast("No se pudo liberar: " + (e.code || e.message)); }
-  confirming = false; if (current === n) drawSheet(true);
+async function liberar(n, d) {
+  if (busy) return;
+  busy = true; drawSheet(true);
+  try {
+    await deleteDoc(doc(db, COL, n)); busy = false; confirming = false;
+    mostrarResultado({ tipo: "ok", titulo: "Número liberado", msg: `El ${n} volvió a quedar disponible.` });
+  } catch (e) { busy = false; confirming = false; mostrarResultado({ tipo: "error", titulo: "No se pudo liberar", msg: textoError(e) }); }
 }
 
 /* ---------- Imagen para compartir ---------- */
