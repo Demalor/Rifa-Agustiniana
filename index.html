@@ -172,15 +172,6 @@ header .top{display:flex;align-items:center;justify-content:space-between;gap:12
 .qr-btn svg{width:24px;height:24px}
 .qr-btn:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
 .menu{top:calc(100% + 8px)}
-.qr-full{position:fixed;inset:0;z-index:40;background:#ffffff;color:#0b1a3f;display:flex;align-items:center;justify-content:center;
-  padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:fadeIn .2s ease both}
-.qr-full-in{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;text-align:center}
-.qr-full img{width:min(88vw,62vh,560px);height:auto;image-rendering:pixelated}
-.qr-t{margin:0 0 8px;font-family:var(--display);font-size:clamp(22px,6vw,32px);color:#5b0f5e}
-.qr-n{margin:10px 0 0;font-weight:800;font-size:clamp(17px,4.6vw,22px);text-transform:uppercase;letter-spacing:.04em}
-.qr-num{margin:0;font-family:var(--display);font-size:clamp(22px,6.5vw,34px);font-variant-numeric:tabular-nums;letter-spacing:.04em}
-.qr-v{margin:4px 0 0;font-size:13px;color:#5c6688}
-.qr-cerrar{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:max(14px,env(safe-area-inset-right,0px));width:48px;height:48px;border-radius:50%;border:2px solid #0b1a3f;background:#fff;color:#0b1a3f;font-size:20px;font-weight:800;cursor:pointer}
 
 /* ===== Splash de entrada (solo CSS, se oculta solo aunque falle el JS) ===== */
 .splash{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;
@@ -255,17 +246,7 @@ header .top{display:flex;align-items:center;justify-content:space-between;gap:12
   <div class="backdrop" id="backdrop"></div>
   <div class="card" id="sheetIn" role="dialog" aria-modal="true" aria-labelledby="shTitle"></div>
 </div>
-<div class="qr-full" id="qrFull" hidden role="dialog" aria-modal="true" aria-label="QR de Nequi">
-  <button class="qr-cerrar" id="qrCerrar" type="button" aria-label="Cerrar">✕</button>
-  <div class="qr-full-in">
-    <p class="qr-t">Paga con Nequi</p>
-    <img src="nequi-qr.png?v=7" alt="Código QR de Nequi a nombre de Julian Sarmiento">
-    <p class="qr-n">Julian Sarmiento</p>
-    <p class="qr-num">3223808103</p>
-    <p class="qr-v">Boleta $15.000 · toca la ✕ para cerrar</p>
-  </div>
-</div>
 <div class="toast" id="toast" hidden></div>
-<script type="module" src="app.js?v=7"></script>
+<script type="module" src="app.js?v=8"></script>
 </body>
 </html>

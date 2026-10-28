@@ -222,7 +222,7 @@ function drawQR() {
       <p>A nombre de <b>Julian Sarmiento</b> · boleta de ${fmt(PRECIO)}</p>
     </div>
     <div class="body">
-      <div class="qr-box"><img src="nequi-qr.png?v=6" alt="Código QR de Nequi para pagar la rifa" id="qrImg"></div>
+      <div class="qr-box"><img src="nequi-qr.png?v=8" alt="Código QR de Nequi para pagar la rifa" id="qrImg"></div>
       <div class="nequi-num"><span>Nequi<br><b>${NEQUI}</b></span><button class="btn ghost" type="button" id="copiarNequi">Copiar número</button></div>
       <p class="qr-nota">Escanéalo desde la app de Nequi. Después de pagar, envía el comprobante a quien te vendió el número.</p>
       <div class="actions"><button class="btn primary" type="button" id="bajarQR">Descargar QR</button></div>
@@ -235,7 +235,7 @@ function drawQR() {
   };
   $("bajarQR").onclick = async () => {
     try {
-      const blob = await (await fetch("nequi-qr.png?v=6")).blob();
+      const blob = await (await fetch("nequi-qr.png?v=8")).blob();
       bajarBlob(blob, "qr-nequi-rifa.png"); toast("QR descargado");
     } catch (e) { toast("No se pudo descargar el QR"); }
   };
@@ -254,23 +254,10 @@ function menuAbierto(v) { menu.hidden = !v; menuBtn.setAttribute("aria-expanded"
 menuBtn.onclick = e => { e.stopPropagation(); menuAbierto(menu.hidden); };
 document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.target)) menuAbierto(false); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !menu.hidden) { menuAbierto(false); menuBtn.focus(); } });
-// QR a pantalla completa, fondo blanco para que otro celular lo escanee fácil
-let wakeLock = null;
-async function mostrarQR() {
-  menuAbierto(false);
-  $("qrFull").hidden = false; document.body.classList.add("modal");
-  $("qrCerrar").focus();
-  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (e) { wakeLock = null; }
-}
-function ocultarQR() {
-  $("qrFull").hidden = true;
-  if (!current) document.body.classList.remove("modal");
-  try { wakeLock?.release(); } catch (e) {} wakeLock = null;
-}
+// El QR se muestra en la misma tarjeta que sube desde abajo
+function mostrarQR() { menuAbierto(false); abrir(QR); }
 $("qrBtn").onclick = mostrarQR;
 $("verQR").onclick = mostrarQR;
-$("qrCerrar").onclick = ocultarQR;
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("qrFull").hidden) ocultarQR(); });
 
 /* ---------- Escrituras ---------- */
 async function reservar(n) {
