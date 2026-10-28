@@ -3,7 +3,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gsta
 import {
   getFirestore, collection, doc, onSnapshot, runTransaction, updateDoc, deleteDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js";
+import { firebaseConfig } from "./firebase-config.js?v=3";
 
 const PRECIO = 15000;
 const COL = "numeros";
@@ -186,7 +186,7 @@ function cargarImagen(src) {
 }
 
 async function generarImagen() {
-  const img = await cargarImagen("afiche.jpg");
+  const img = await cargarImagen("afiche.jpg?v=3");
   try { await document.fonts.load('italic 900 30px "Nunito"'); } catch (e) {}
   const S = 2; // doble resolución para que las X y los números se vean nítidos
   const c = document.createElement("canvas");
