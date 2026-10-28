@@ -63,17 +63,6 @@ input:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
 .btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
 .btn:disabled{opacity:.5;cursor:wait}
 /* hoja */
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:3px solid var(--yellow);border-radius:18px 18px 0 0;
-  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
-  box-shadow:0 -12px 40px #0008;max-height:88vh;overflow:auto}
-.sheet .in{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-.sh-head{display:flex;align-items:center;gap:14px}
-.big{font-family:var(--display);font-size:44px;line-height:1;background:var(--cell);border-radius:12px;padding:8px 14px;color:var(--yellow)}
-.big.pend{background:var(--green);color:var(--ink)} .big.pago{background:var(--red);color:#fff}
-.sh-head h2{margin:0;font-size:18px} .sh-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
-.x{margin-left:auto}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width:480px){.grid2{grid-template-columns:1fr}}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .seg input{position:absolute;opacity:0;pointer-events:none}
 .seg label{flex-direction:row;align-items:center;gap:8px;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;color:var(--fg);font-size:14px;text-transform:none;letter-spacing:0}
@@ -97,7 +86,6 @@ footer{font-size:12px;color:var(--muted)}
 .n{width:100%;min-width:0;padding:0;border-radius:18%;font-size:clamp(11px,3.9vw,22px);border-width:2px}
 .toolbar input{flex:1 1 60%}
 .toolbar .btn{flex:0 0 auto}
-.sheet .in{width:100%}
 @media (max-width:600px){
   body{padding-block:12px 110px;font-size:14px}
   .wrap{gap:14px}
@@ -108,36 +96,48 @@ footer{font-size:12px;color:var(--muted)}
   .toolbar input,.toolbar .btn{flex:none;width:100%}
   .board{padding:2%;column-gap:1.4%}
   .n{border-width:1px}
-  .sheet{max-height:92vh;border-radius:16px 16px 0 0}
   .big{font-size:clamp(32px,10vw,44px)}
   .actions .btn{flex:1 1 100%}
 }
 @media (hover:none){.n:hover{transform:none;border-color:transparent}}
-/* ===== Pantalla completa del número ===== */
+/* ===== Tarjeta del número (sube desde abajo) ===== */
 body.modal{overflow:hidden}
-.sheet{inset:0;top:0;max-height:none;height:100%;border-radius:0;border-top:0;padding:0;background:var(--bg);display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.sheet .in{max-width:none;margin:0;gap:0;flex:1;display:flex;flex-direction:column}
-.hero{position:relative;background:var(--panel);text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;
-  padding:calc(18px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 22px max(16px,env(safe-area-inset-left,0px));border-bottom:3px solid var(--yellow)}
+.sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.backdrop{position:absolute;inset:0;background:#030a1fb3;backdrop-filter:blur(2px);animation:fadeIn .25s ease both}
+.sheet.cerrando .backdrop{animation:fadeOut .25s ease both}
+.card{position:relative;width:100%;max-width:520px;max-height:92%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  background:var(--bg);border-radius:24px 24px 0 0;box-shadow:0 -16px 50px #000a;border:1px solid var(--line);border-bottom:0;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+.card::before{content:"";display:block;width:44px;height:5px;border-radius:3px;background:#ffffff55;margin:10px auto 0;position:absolute;left:50%;transform:translateX(-50%);z-index:2}
+@media (min-width:600px){.sheet{align-items:center}.card{border-radius:24px;border-bottom:1px solid var(--line);max-height:88%}}
+.card.entrar{animation:subir .38s cubic-bezier(.2,.9,.25,1.05) both}
+.card.salir-arriba{animation:salirArriba .3s cubic-bezier(.5,0,.8,.4) both}
+.card.salir-abajo{animation:bajar .26s cubic-bezier(.5,0,.8,.4) both}
+@keyframes subir{from{transform:translateY(105%)}to{transform:none}}
+@keyframes salirArriba{to{transform:translateY(-130%);opacity:.4}}
+@keyframes bajar{to{transform:translateY(105%)}}
+@keyframes fadeIn{from{opacity:0}} @keyframes fadeOut{to{opacity:0}}
+.hero{position:relative;background:var(--panel);text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;padding:26px 56px 18px;border-bottom:3px solid var(--yellow)}
 .hero.pend{background:var(--green);color:var(--ink)} .hero.pago{background:var(--red);color:#fff}
-.hero-num{font-family:var(--display);font-size:clamp(96px,34vw,190px);line-height:.95;color:var(--yellow);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hero-num{font-family:var(--display);font-size:clamp(72px,24vw,128px);line-height:.95;color:var(--yellow);font-variant-numeric:tabular-nums}
 .hero.pend .hero-num{color:var(--ink)} .hero.pago .hero-num{color:#fff}
-.hero h2{margin:0;font-size:clamp(18px,5vw,24px)}
+.hero h2{margin:0;font-size:clamp(17px,4.6vw,22px)}
 .hero p{margin:0;font-size:14px;opacity:.85;max-width:34ch;text-wrap:balance}
-.hero .x{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));width:44px;height:44px;padding:0;font-size:18px;color:inherit;border-color:currentColor}
-.hero.pend .x{border-color:#0b1a3f55} 
-.body{width:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px;
-  padding:20px max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.hero .x{position:absolute;top:14px;right:14px;width:40px;height:40px;padding:0;font-size:16px;color:inherit;border-color:currentColor;background:transparent}
+.hero.pend .x{border-color:#0b1a3f66}
+.body{width:100%;display:flex;flex-direction:column;gap:14px;padding:18px 18px 22px}
 .body .actions{flex-direction:column}
 .body .actions .btn{flex:none;width:100%;padding:15px}
 .form-err{margin:0;background:#ef444426;border:1px solid var(--red);color:#ffd0d0;border-radius:10px;padding:10px 12px;font-weight:600}
 input[type=text]:disabled,input[type=tel]:disabled,.seg input:disabled+label{opacity:.6}
 .btn .spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;margin-right:8px;vertical-align:-2px;animation:girar .7s linear infinite}
 @keyframes girar{to{transform:rotate(360deg)}}
-.res-icon{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:34px;font-weight:800;margin-bottom:4px;border:3px solid currentColor;background:#ffffff22}
+.res-icon{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:30px;font-weight:800;margin-bottom:2px;border:3px solid currentColor;background:#ffffff22}
 .res-icon.ok{color:var(--fg)} .hero.pend .res-icon.ok{color:var(--ink)}
 .res-icon.ocupado,.res-icon.error{color:#fff;background:var(--red);border-color:#fff}
-@media (prefers-reduced-motion:reduce){.btn .spin{animation:none}}
+.res-icon.ok{animation:pop .45s .25s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes pop{from{transform:scale(0)}}
+@media (prefers-reduced-motion:reduce){.btn .spin,.card.entrar,.card.salir-arriba,.card.salir-abajo,.backdrop,.res-icon.ok{animation:none!important}}
 
 
 </style>
@@ -179,10 +179,11 @@ input[type=text]:disabled,input[type=tel]:disabled,.seg input:disabled+label{opa
   <footer>Toca un número para apartarlo. Los cambios se ven al instante para todo el equipo.</footer>
 </div>
 
-<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="shTitle">
-  <div class="in" id="sheetIn"></div>
+<div class="sheet" id="sheet" hidden>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="card" id="sheetIn" role="dialog" aria-modal="true" aria-labelledby="shTitle"></div>
 </div>
 <div class="toast" id="toast" hidden></div>
-<script type="module" src="app.js?v=4"></script>
+<script type="module" src="app.js?v=5"></script>
 </body>
 </html>

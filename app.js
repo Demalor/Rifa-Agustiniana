@@ -68,15 +68,33 @@ function setStatus(t, err) { const s = $("status"); s.textContent = t; s.classLi
 // resultado: null | { tipo: "ok" | "ocupado" | "error", titulo, msg }
 let resultado = null, borrador = null, formError = "";
 
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function animar(el, clase, ms) {
+  return new Promise(ok => {
+    el.classList.remove("entrar", "salir-arriba", "salir-abajo");
+    if (reduceMotion) return ok();
+    void el.offsetWidth; el.classList.add(clase);
+    setTimeout(ok, ms);
+  });
+}
+
 function abrir(n) {
   current = n; resultado = null; borrador = null; formError = ""; confirming = false;
+  const card = $("sheetIn");
+  $("sheet").classList.remove("cerrando");
   drawSheet(true); $("sheet").hidden = false; document.body.classList.add("modal");
-  $("sheet").scrollTop = 0; render();
+  card.scrollTop = 0; animar(card, "entrar", 380); render();
 }
-function cerrar() {
-  if (busy) return; // no cerrar a mitad de una operación
-  current = null; resultado = null; $("sheet").hidden = true; document.body.classList.remove("modal"); render();
+let cerrandoAhora = false;
+async function cerrar() {
+  if (busy || cerrandoAhora || !current) return; // no cerrar a mitad de una operación
+  cerrandoAhora = true;
+  $("sheet").classList.add("cerrando");
+  await animar($("sheetIn"), "salir-abajo", 260);
+  current = null; resultado = null; $("sheet").hidden = true; document.body.classList.remove("modal");
+  $("sheetIn").classList.remove("salir-abajo"); cerrandoAhora = false; render();
 }
+$("backdrop").onclick = cerrar;
 document.addEventListener("keydown", e => { if (e.key === "Escape" && current) cerrar(); });
 
 function leerFormulario() {
@@ -177,7 +195,14 @@ function drawSheet(fresh) {
   $("cerrar").onclick = cerrar;
 }
 
-function mostrarResultado(r) { resultado = r; if (current) drawSheet(true); }
+// La tarjeta del formulario se va hacia arriba y la del resultado sube desde abajo
+async function mostrarResultado(r) {
+  if (!current) return;
+  const card = $("sheetIn");
+  await animar(card, "salir-arriba", 300);
+  resultado = r; drawSheet(true); card.scrollTop = 0;
+  await animar(card, "entrar", 380);
+}
 function textoError(e) {
   const c = e && e.code || "";
   if (c.includes("permission-denied")) return "La base de datos rechazó el cambio (permisos). Revisa las reglas de Firestore.";
