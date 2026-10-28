@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rifa Juntos por Nuestro Sueño</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Archivo:wght@400;600;800&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+/* Layout: banner con resumen → tablero 10×10 → hoja inferior para apartar/editar. Look único azul noche + amarillo del afiche. */
+:root{
+  --bg:#0b1a3f; --panel:#12245a; --cell:#0a1638; --line:#24397a;
+  --fg:#f3f5fb; --muted:#a8b3d6; --yellow:#ffd31a; --ink:#0b1a3f;
+  --green:#22c55e; --red:#ef4444;
+  --display:"Bowlby One","Arial Black",Impact,sans-serif;
+  --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 120px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,8vw,52px);line-height:1;margin:0;color:var(--yellow);text-wrap:balance}
+h1 small{display:block;font-size:.38em;color:var(--fg);margin-top:6px;letter-spacing:.02em}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
+.chip b{color:var(--yellow)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{background:var(--panel);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stat strong{font-family:var(--display);font-weight:400;font-size:24px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat.g strong{color:var(--green)} .stat.r strong{color:var(--red)} .stat.y strong{color:var(--yellow)}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toolbar input{flex:1;min-width:0}
+.board{background:#fff1;border:2px solid var(--line);border-radius:16px;padding:10px;display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
+.n{appearance:none;border:2px solid transparent;background:var(--cell);color:var(--fg);border-radius:9px;aspect-ratio:1/1;max-width:100%;
+  font-family:var(--display);font-size:clamp(13px,3.6vw,20px);cursor:pointer;position:relative;font-variant-numeric:tabular-nums;transition:transform .12s}
+.n:hover{transform:translateY(-1px);border-color:var(--yellow)}
+.n:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.n.pend{background:var(--green);color:var(--ink)}
+.n.pago{background:var(--red);color:#fff}
+.n.dim{opacity:.25}
+.n.sel{border-color:var(--yellow);box-shadow:0 0 0 2px var(--yellow)}
+@media (max-width:420px){.board{gap:4px;padding:6px}.n{border-radius:6px}}
+.status{font-size:13px;color:var(--muted);min-height:1.2em}
+.status.err{color:#ffb4b4}
+label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;flex-direction:column;gap:5px}
+input[type=text],input[type=tel],input[type=search]{font:inherit;font-size:16px;color:var(--fg);background:var(--cell);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-transform:none;letter-spacing:0}
+input:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
+.btn{font:inherit;font-weight:800;border:0;border-radius:10px;padding:12px 16px;cursor:pointer;font-size:15px}
+.btn:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.btn.primary{background:var(--yellow);color:var(--ink)}
+.btn.red{background:var(--red);color:#fff}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:wait}
+/* hoja */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:3px solid var(--yellow);border-radius:18px 18px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  box-shadow:0 -12px 40px #0008;max-height:88vh;overflow:auto}
+.sheet .in{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.sh-head{display:flex;align-items:center;gap:14px}
+.big{font-family:var(--display);font-size:44px;line-height:1;background:var(--cell);border-radius:12px;padding:8px 14px;color:var(--yellow)}
+.big.pend{background:var(--green);color:var(--ink)} .big.pago{background:var(--red);color:#fff}
+.sh-head h2{margin:0;font-size:18px} .sh-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.x{margin-left:auto}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.grid2{grid-template-columns:1fr}}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{flex-direction:row;align-items:center;gap:8px;border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;color:var(--fg);font-size:14px;text-transform:none;letter-spacing:0}
+.seg label i{width:16px;height:16px;border-radius:4px;flex:none}
+.seg input:checked+label{border-color:var(--yellow);background:var(--cell)}
+.seg input:focus-visible+label{outline:2px solid var(--yellow)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.actions .btn{flex:1 1 140px}
+.info{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;background:var(--cell);border-radius:12px;padding:12px}
+.info dt{color:var(--muted)} .info dd{margin:0;overflow-wrap:anywhere}
+.confirm{background:#ef444422;border:1px solid var(--red);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top,0px));z-index:30;background:var(--yellow);color:var(--ink);font-weight:800;padding:10px 16px;border-radius:999px;box-shadow:0 6px 20px #0006}
+footer{font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.n{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Uniagustiniana · Control de boletas</div>
+    <h1>Rifa<small>¡Juntos por nuestro sueño!</small></h1>
+    <div class="meta">
+      <span class="chip">Premio <b>$300.000</b></span>
+      <span class="chip">Boleta <b>$15.000</b></span>
+      <span class="chip">Sorteo <b>7 de noviembre</b></span>
+      <span class="chip">Nequi <b id="nequi">3223808103</b></span>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="Resumen">
+    <div class="stat y"><span>Libres</span><strong id="sLibres">100</strong></div>
+    <div class="stat g"><span>Pendientes</span><strong id="sPend">0</strong></div>
+    <div class="stat r"><span>Pagados</span><strong id="sPago">0</strong></div>
+    <div class="stat"><span>Recaudado</span><strong id="sPlata">$0</strong></div>
+  </section>
+
+  <div class="legend">
+    <span><i style="background:var(--cell);border:1px solid var(--line)"></i>Libre</span>
+    <span><i style="background:var(--green)"></i>Apartado, pendiente de pago</span>
+    <span><i style="background:var(--red)"></i>Pagado</span>
+    <span id="porCobrar"></span>
+  </div>
+
+  <div class="toolbar">
+    <input id="buscar" type="search" placeholder="Buscar por comprador o vendedor…" aria-label="Buscar">
+  </div>
+
+  <div class="board" id="board" aria-label="Tablero de números 00 a 99"></div>
+  <div class="status" id="status">Conectando con el tablero compartido…</div>
+  <footer>Toca un número para apartarlo. Los cambios se ven al instante para todo el equipo.</footer>
+</div>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <div class="in" id="sheetIn"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
