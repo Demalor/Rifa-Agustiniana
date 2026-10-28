@@ -181,9 +181,29 @@ header .top{display:flex;align-items:center;justify-content:space-between;gap:12
 .qr-num{margin:0;font-family:var(--display);font-size:clamp(22px,6.5vw,34px);font-variant-numeric:tabular-nums;letter-spacing:.04em}
 .qr-v{margin:4px 0 0;font-size:13px;color:#5c6688}
 .qr-cerrar{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:max(14px,env(safe-area-inset-right,0px));width:48px;height:48px;border-radius:50%;border:2px solid #0b1a3f;background:#fff;color:#0b1a3f;font-size:20px;font-weight:800;cursor:pointer}
+
+/* ===== Splash de entrada (solo CSS, se oculta solo aunque falle el JS) ===== */
+.splash{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;
+  padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));
+  animation:splashOut .55s ease 1.7s forwards}
+.splash-in{display:flex;flex-direction:column;align-items:center;gap:clamp(14px,4vw,22px);text-align:center}
+.splash-t{display:flex;flex-direction:column;align-items:center;font-family:var(--display);line-height:.92;color:var(--yellow);text-transform:uppercase}
+.splash-t span:first-child{font-size:clamp(40px,13vw,96px);animation:splashUp .6s cubic-bezier(.2,.9,.25,1.1) .1s both}
+.splash-t span:last-child{font-size:clamp(30px,9.6vw,72px);color:var(--fg);animation:splashUp .6s cubic-bezier(.2,.9,.25,1.1) .25s both}
+.splash-by{font-size:12px;font-weight:800;letter-spacing:.42em;color:var(--muted);padding-left:.42em;animation:splashFade .5s ease .7s both}
+@keyframes splashUp{from{opacity:0;transform:translateY(24px) scale(.96)}}
+@keyframes splashFade{from{opacity:0}}
+@keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none}}
+@media (prefers-reduced-motion:reduce){.splash{animation:splashOut .2s linear .8s forwards}.splash-t span,.splash-by{animation:none}}
 </style>
 </head>
 <body>
+<div class="splash" aria-hidden="true">
+  <div class="splash-in">
+    <div class="splash-t"><span>Ultimate</span><span>Agustiniana</span></div>
+    <div class="splash-by">DEMALOR</div>
+  </div>
+</div>
 <div class="wrap">
   <header>
     <div class="top">
