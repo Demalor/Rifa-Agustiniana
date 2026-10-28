@@ -25,6 +25,11 @@ service cloud.firestore {
       // Liberar un número
       allow delete: if request.auth != null;
     }
+    // Marca de que los números del afiche ya se cargaron (se crea una sola vez)
+    match /meta/semilla {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

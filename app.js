@@ -175,6 +175,110 @@ async function liberar(n) {
   confirming = false; if (current === n) drawSheet(true);
 }
 
+/* ---------- Imagen para compartir ---------- */
+// Coordenadas de las celdas en afiche.jpg (1024×1536), medidas sobre la imagen original
+const COLS = [[89,179],[190,272],[283,362],[371,455],[465,547],[557,641],[652,736],[747,829],[838,917],[926,1009]];
+const ROWS = [[665,713],[720,766],[773,819],[827,873],[881,927],[934,979],[987,1035],[1043,1089],[1097,1143],[1151,1197]];
+const COLOR_X = { pendiente: "#1fd14a", pagado: "#ff2b2b" };
+
+function cargarImagen(src) {
+  return new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
+}
+
+async function generarImagen() {
+  const img = await cargarImagen("afiche.jpg");
+  try { await document.fonts.load('italic 900 30px "Nunito"'); } catch (e) {}
+  const S = 2; // doble resolución para que las X y los números se vean nítidos
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth * S; c.height = img.naturalHeight * S;
+  const g = c.getContext("2d");
+  g.scale(S, S);
+  g.imageSmoothingQuality = "high";
+  g.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+
+  for (let r = 0; r < 10; r++) for (let k = 0; k < 10; k++) {
+    const n = pad(r * 10 + k), [x0, x1] = COLS[k], [y0, y1] = ROWS[r];
+    const w = x1 - x0, h = y1 - y0, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    // Celda limpia (tapa cualquier marca que traiga el afiche)
+    g.fillStyle = "#031a40";
+    g.beginPath(); g.roundRect(x0 - 1, y0 - 1, w + 2, h + 2, 10); g.fill();
+    g.fillStyle = "#ffffff";
+    g.font = 'italic 900 30px "Nunito", "Arial Black", sans-serif';
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(n, cx, cy + 1);
+
+    const e = estado(n);
+    if (!e) continue;
+    const dx = 20, dy = 20;
+    g.lineCap = "round";
+    for (const [ancho, color] of [[14, "rgba(0,0,0,.45)"], [9, COLOR_X[e]]]) {
+      g.strokeStyle = color; g.lineWidth = ancho;
+      g.beginPath();
+      g.moveTo(cx - dx, cy - dy); g.lineTo(cx + dx, cy + dy);
+      g.moveTo(cx + dx, cy - dy); g.lineTo(cx - dx, cy + dy);
+      g.stroke();
+    }
+    // Número encima de la X para que se siga leyendo
+    g.lineJoin = "round"; g.lineWidth = 5; g.strokeStyle = "#031a40";
+    g.strokeText(n, cx, cy + 1);
+    g.fillStyle = "#ffffff"; g.fillText(n, cx, cy + 1);
+  }
+
+  // Sello de actualización debajo del tablero
+  const txt = "Actualizado: " + new Date().toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })
+    + "  ·  Disponibles: " + $("sLibres").textContent;
+  g.font = '800 15px "Archivo", sans-serif';
+  const tw = g.measureText(txt).width + 24;
+  g.fillStyle = "#ffd31a";
+  g.beginPath(); g.roundRect(512 - tw / 2, 1203, tw, 24, 12); g.fill();
+  g.fillStyle = "#0b1a3f"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(txt, 512, 1216);
+
+  return new Promise(ok => c.toBlob(ok, "image/png"));
+}
+
+$("descargar").onclick = async () => {
+  const btn = $("descargar");
+  btn.disabled = true; btn.textContent = "Generando…";
+  try {
+    const blob = await generarImagen();
+    const h = new Date();
+    const nombre = `rifa-numeros-${h.getFullYear()}-${pad(h.getMonth() + 1)}-${pad(h.getDate())}-${pad(h.getHours())}${pad(h.getMinutes())}.png`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    toast("Imagen descargada");
+  } catch (e) {
+    toast("No se pudo generar la imagen");
+  } finally {
+    btn.disabled = false; btn.textContent = "Descargar imagen";
+  }
+};
+
+/* ---------- Números que ya venían marcados en el afiche ---------- */
+// Se cargan una sola vez en toda la vida de la base de datos (marca en meta/semilla).
+const SEMILLA = ["13", "21", "23", "87"];
+async function sembrar() {
+  try {
+    await runTransaction(db, async tx => {
+      const metaRef = doc(db, "meta", "semilla");
+      const meta = await tx.get(metaRef);
+      if (meta.exists()) return;
+      const refs = SEMILLA.map(n => doc(db, COL, n));
+      const snaps = [];
+      for (const r of refs) snaps.push(await tx.get(r));
+      refs.forEach((r, i) => {
+        if (!snaps[i].exists()) tx.set(r, {
+          numero: SEMILLA[i], estado: "pendiente", comprador: "Del afiche (sin nombre)",
+          telefono: "", vendedor: "—", fecha: serverTimestamp(), pagadoEn: null
+        });
+      });
+      tx.set(metaRef, { hecho: true, fecha: serverTimestamp() });
+    });
+  } catch (e) { console.warn("Semilla no aplicada:", e.code || e.message); }
+}
+
 /* ---------- Arranque ---------- */
 if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith("PEGA")) {
   setStatus("Falta configurar Firebase: pega tu configuración en firebase-config.js (ver README).", true);
@@ -184,6 +288,7 @@ if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWit
   const auth = getAuth(app);
   onAuthStateChanged(auth, user => {
     if (!user) return;
+    sembrar();
     onSnapshot(collection(db, COL), snap => {
       const next = {};
       snap.forEach(d => { next[d.id] = d.data(); });

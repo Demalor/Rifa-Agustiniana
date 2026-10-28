@@ -22,9 +22,13 @@ Premio $300.000 · Boleta $15.000 · Sorteo 7 de noviembre · Nequi 3223808103
 
 La página queda en `https://demalord.github.io/rifa/`.
 
-### Cargar los números que ya estaban marcados en el afiche
+### Números que ya estaban marcados en el afiche
 
-En Firestore, crea en la colección `numeros` los documentos `13`, `21`, `23` y `87`, o simplemente apártalos desde la página.
+El 13, 21, 23 y 87 se cargan solos como pendientes la primera vez que alguien abre la página (queda una marca en `meta/semilla` para que no se repita).
+
+## Imagen para compartir
+
+El botón **Descargar imagen** genera un PNG sobre `afiche.jpg` con una X verde en los números pendientes y una X roja en los pagados, más la fecha de actualización y los disponibles.
 
 ## Archivos
 
@@ -33,4 +37,5 @@ En Firestore, crea en la colección `numeros` los documentos `13`, `21`, `23` y 
 | `index.html` | Estructura y estilos |
 | `app.js` | Lógica del tablero y conexión con Firestore |
 | `firebase-config.js` | Configuración de tu proyecto de Firebase |
+| `afiche.jpg` | Afiche base para la imagen descargable |
 | `firestore.rules` | Reglas de seguridad de la base de datos |
