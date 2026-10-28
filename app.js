@@ -219,12 +219,12 @@ function drawQR() {
   el.innerHTML = `<div class="hero">
       <button class="btn ghost x" type="button" id="cerrar" aria-label="Cerrar">✕</button>
       <h2 id="shTitle" style="margin-top:6px">Paga con Nequi</h2>
-      <p>Boleta de ${fmt(PRECIO)} · escanea el código desde la app de Nequi</p>
+      <p>A nombre de <b>Julian Sarmiento</b> · boleta de ${fmt(PRECIO)}</p>
     </div>
     <div class="body">
       <div class="qr-box"><img src="nequi-qr.png?v=6" alt="Código QR de Nequi para pagar la rifa" id="qrImg"></div>
       <div class="nequi-num"><span>Nequi<br><b>${NEQUI}</b></span><button class="btn ghost" type="button" id="copiarNequi">Copiar número</button></div>
-      <p class="qr-nota">Después de pagar, envía el comprobante a quien te vendió el número.</p>
+      <p class="qr-nota">Escanéalo desde la app de Nequi. Después de pagar, envía el comprobante a quien te vendió el número.</p>
       <div class="actions"><button class="btn primary" type="button" id="bajarQR">Descargar QR</button></div>
     </div>`;
   $("qrImg").onerror = () => { $("qrImg").parentElement.innerHTML = '<div class="qr-falta">El QR todavía no está cargado.</div>'; $("bajarQR").hidden = true; };
