@@ -256,7 +256,6 @@ document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.t
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !menu.hidden) { menuAbierto(false); menuBtn.focus(); } });
 // El QR se muestra en la misma tarjeta que sube desde abajo
 function mostrarQR() { menuAbierto(false); abrir(QR); }
-$("qrBtn").onclick = mostrarQR;
 $("verQR").onclick = mostrarQR;
 
 /* ---------- Escrituras ---------- */
