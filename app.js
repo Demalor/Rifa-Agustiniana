@@ -121,6 +121,7 @@ function drawSheet(fresh) {
   const n = current, e = estado(n), d = data[n] || {}, el = $("sheetIn");
   if (!n) return;
   if (n === QR) { if (fresh) drawQR(); return; }
+  if (n === IMG) { if (fresh) drawImg(); return; }
 
   // Pantalla de resultado: no se toca con las actualizaciones en vivo
   if (resultado) {
@@ -222,7 +223,7 @@ function drawQR() {
       <p>A nombre de <b>Julian Sarmiento</b> · boleta de ${fmt(PRECIO)}</p>
     </div>
     <div class="body">
-      <div class="qr-box"><img src="nequi-qr.png?v=8" alt="Código QR de Nequi para pagar la rifa" id="qrImg"></div>
+      <div class="qr-box"><img src="nequi-qr.png?v=10" alt="Código QR de Nequi para pagar la rifa" id="qrImg"></div>
       <div class="nequi-num"><span>Nequi<br><b>${NEQUI}</b></span><button class="btn ghost" type="button" id="copiarNequi">Copiar número</button></div>
       <p class="qr-nota">Escanéalo desde la app de Nequi. Después de pagar, envía el comprobante a quien te vendió el número.</p>
       <div class="actions"><button class="btn primary" type="button" id="bajarQR">Descargar QR</button></div>
@@ -235,7 +236,7 @@ function drawQR() {
   };
   $("bajarQR").onclick = async () => {
     try {
-      const blob = await (await fetch("nequi-qr.png?v=8")).blob();
+      const blob = await (await fetch("nequi-qr.png?v=10")).blob();
       bajarBlob(blob, "qr-nequi-rifa.png"); toast("QR descargado");
     } catch (e) { toast("No se pudo descargar el QR"); }
   };
@@ -378,8 +379,12 @@ async function generarImagen() {
   g.fillStyle = "#0b1a3f"; g.textAlign = "center"; g.textBaseline = "middle";
   g.fillText(txt, 512, 1216);
 
-  return new Promise(ok => c.toBlob(ok, "image/png"));
+  return new Promise(ok => c.toBlob(ok, "image/jpeg", 0.92));
 }
+
+// Imagen del tablero: se muestra en la tarjeta para guardarla en la galería
+const IMG = "IMG";
+let imgArchivo = null, imgURL = null;
 
 $("descargar").onclick = async () => {
   const btn = $("descargar");
@@ -388,15 +393,47 @@ $("descargar").onclick = async () => {
   try {
     const blob = await generarImagen();
     const h = new Date();
-    const nombre = `rifa-numeros-${h.getFullYear()}-${pad(h.getMonth() + 1)}-${pad(h.getDate())}-${pad(h.getHours())}${pad(h.getMinutes())}.png`;
-    bajarBlob(blob, nombre);
-    toast("Imagen descargada");
+    const nombre = `rifa-numeros-${h.getFullYear()}-${pad(h.getMonth() + 1)}-${pad(h.getDate())}-${pad(h.getHours())}${pad(h.getMinutes())}.jpg`;
+    if (imgURL) URL.revokeObjectURL(imgURL);
+    imgArchivo = new File([blob], nombre, { type: "image/jpeg" });
+    imgURL = URL.createObjectURL(blob);
+    menuAbierto(false);
+    abrir(IMG);
   } catch (e) {
     toast("No se pudo generar la imagen");
   } finally {
-    btn.disabled = false; btn.innerHTML = original; menuAbierto(false);
+    btn.disabled = false; btn.innerHTML = original;
   }
 };
+
+function puedeCompartir() {
+  try { return !!(imgArchivo && navigator.canShare && navigator.canShare({ files: [imgArchivo] })); } catch (e) { return false; }
+}
+
+function drawImg() {
+  const el = $("sheetIn"); el.dataset.state = "img";
+  const share = puedeCompartir();
+  el.innerHTML = `<div class="hero">
+      <button class="btn ghost x" type="button" id="cerrar" aria-label="Cerrar">✕</button>
+      <h2 id="shTitle" style="margin-top:6px">Imagen del tablero</h2>
+      <p>${share ? "Toca Guardar o compartir y elige Guardar imagen para que quede en tu galería." : "Mantén presionada la imagen y elige Guardar imagen o Descargar imagen."}</p>
+    </div>
+    <div class="body">
+      <img class="img-prev" src="${imgURL}" alt="Tablero de la rifa con los números apartados y pagados">
+      <div class="actions">
+        ${share ? '<button class="btn primary" type="button" id="compartirImg">Guardar o compartir</button>' : ""}
+        <button class="btn ${share ? "ghost" : "primary"}" type="button" id="bajarImg">Descargar archivo</button>
+      </div>
+      <p class="qr-nota">Si usas “Descargar archivo” en el celular, la imagen queda en la carpeta Descargas o en la app Archivos, no en la galería.</p>
+    </div>`;
+  $("cerrar").onclick = cerrar;
+  $("bajarImg").onclick = () => { bajarBlob(imgArchivo, imgArchivo.name); toast("Imagen descargada"); };
+  $("compartirImg") && ($("compartirImg").onclick = async () => {
+    try { await navigator.share({ files: [imgArchivo], title: "Rifa Uniagustiniana" }); }
+    catch (e) { if (e.name !== "AbortError") toast("No se pudo abrir el menú de compartir"); }
+  });
+}
+
 
 /* ---------- Números que ya venían marcados en el afiche ---------- */
 // Se cargan una sola vez en toda la vida de la base de datos (marca en meta/semilla).
