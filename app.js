@@ -4,7 +4,7 @@ import {
   getFirestore, collection, doc, onSnapshot, runTransaction, updateDoc, deleteDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=3";
-import { GANADOR as GANADOR_FIJO } from "./ganador.js?v=11";
+import { GANADOR as GANADOR_FIJO } from "./ganador.js?v=13";
 
 const PRECIO = 15000;
 const COL = "numeros";
@@ -491,8 +491,9 @@ function girar() {
   $("winInfo").hidden = true; $("winActions").hidden = true; $("winSr").textContent = "";
   const dig = GANADOR.split("");
   const reels = [$("reel0"), $("reel1")];
-  const dur = reduceMotion ? [0, 0] : [3200, 4600];
-  const idx = reels.map((r, i) => armarCarrete(r, dig[i], reduceMotion ? 0 : 5 + i * 3));
+  // El sorteo siempre se anima (es el momento de la celebración), aunque el celular tenga "Reducir movimiento"
+  const dur = [3200, 4600];
+  const idx = reels.map((r, i) => armarCarrete(r, dig[i], 5 + i * 3));
   requestAnimationFrame(() => requestAnimationFrame(() => {
     reels.forEach((r, i) => {
       const h = r.parentElement.getBoundingClientRect().height;
@@ -546,7 +547,6 @@ function detenerConfeti() {
   for (const id of ["confeti", "confetiAtras"]) { const c = $(id); c.getContext("2d").clearRect(0, 0, c.width, c.height); }
 }
 function confeti() {
-  if (reduceMotion) return;
   cancelAnimationFrame(confetiRAF);
   const A = lienzo("confetiAtras"), F = lienzo("confeti"), dpr = A.dpr;
   const slots = document.querySelector(".slots").getBoundingClientRect();
@@ -593,7 +593,7 @@ if (GANADOR) {
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("win").hidden) cerrarSorteo(); });
   infoGanador();
   // Arranca justo cuando termina el splash
-  setTimeout(abrirSorteo, reduceMotion ? 900 : 3000);
+  setTimeout(abrirSorteo, 3000);
 }
 
 /* ---------- Arranque ---------- */
