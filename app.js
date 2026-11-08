@@ -4,7 +4,7 @@ import {
   getFirestore, collection, doc, onSnapshot, runTransaction, updateDoc, deleteDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=3";
-import { GANADOR as GANADOR_FIJO } from "./ganador.js?v=13";
+import { GANADOR as GANADOR_FIJO } from "./ganador.js?v=14";
 
 const PRECIO = 15000;
 const COL = "numeros";
@@ -552,36 +552,55 @@ function confeti() {
   const slots = document.querySelector(".slots").getBoundingClientRect();
   const cx = (slots.left + slots.width / 2) * dpr, cy = (slots.top + slots.height / 2) * dpr;
   const atras = [], frente = [];
-  // Explosión lateral desde detrás de la tarjeta
-  for (let i = 0; i < 220; i++) {
-    const lado = i % 2 ? 1 : -1;
-    const ang = (Math.random() * 70 - 45) * Math.PI / 180;     // abanico hacia arriba/lados
-    const v = (14 + Math.random() * 22) * dpr;
-    atras.push(pieza(cx + lado * Math.random() * 20 * dpr, cy + (Math.random() - .5) * slots.height * .6 * dpr,
-      lado * Math.cos(ang) * v, -Math.sin(ang + .35) * v, dpr, false));
+  const LADOS_FULL = 3000;   // 3 s de chorro a toda potencia
+  const LADOS_BAJA = 4500;   // luego va bajando lentamente durante 4,5 s
+  const LLUVIA = 7000;       // lluvia por delante
+  function salirLados(n) {
+    for (let i = 0; i < n; i++) {
+      const lado = Math.random() < .5 ? -1 : 1;
+      const ang = (15 + Math.random() * 60) * Math.PI / 180;   // hacia los lados en arco, para que se queden en pantalla
+      const v = (9 + Math.random() * 14) * dpr;
+      atras.push(pieza(cx + lado * slots.width * .3 * dpr, cy + (Math.random() - .5) * slots.height * .5 * dpr,
+        lado * Math.cos(ang) * v, -Math.sin(ang) * v - 4 * dpr, dpr, false));
+    }
   }
-  const t0 = performance.now(), DUR_LLUVIA = 6500, FIN = 9500;
-  let ultimo = t0;
+  salirLados(90); // golpe inicial
+  const t0 = performance.now();
+  let ultimo = t0, acumLados = 0;
   (function paso(t) {
     const dt = Math.min(2, (t - ultimo) / 16.7); ultimo = t;
-    // Lluvia continua por delante durante unos segundos
-    if (t - t0 < DUR_LLUVIA) {
-      const n = Math.random() < .5 ? 3 : 2;
-      for (let i = 0; i < n; i++) frente.push(pieza(Math.random() * F.W, -20 * dpr, (Math.random() - .5) * 2 * dpr, (2 + Math.random() * 3) * dpr, dpr, true));
+    const e = t - t0;
+
+    // Chorro lateral: fuerte 3 s y después se apaga poco a poco
+    let ritmo = 0;
+    if (e < LADOS_FULL) ritmo = 7;
+    else if (e < LADOS_FULL + LADOS_BAJA) ritmo = 7 * Math.pow(1 - (e - LADOS_FULL) / LADOS_BAJA, 1.6);
+    acumLados += ritmo * dt;
+    if (acumLados >= 1) { salirLados(acumLados | 0); acumLados %= 1; }
+
+    // Lluvia por delante: pocas piezas, grandes, como si estuvieran cerca de la cámara
+    if (e < LLUVIA && Math.random() < .09 * dt) {
+      const p = pieza(Math.random() * F.W, -40 * dpr, (Math.random() - .5) * 1.5 * dpr, (2.5 + Math.random() * 2) * dpr, dpr, true);
+      p.r = (12 + Math.random() * 10) * dpr; p.vg = .03 + Math.random() * .05;
+      frente.push(p);
     }
+
     A.g.clearRect(0, 0, A.W, A.H); F.g.clearRect(0, 0, F.W, F.H);
     let vivos = 0;
     for (const p of atras) {
-      p.vy += .5 * dpr * dt; p.vx *= Math.pow(.97, dt); p.vy *= Math.pow(.985, dt);
+      p.vy += .32 * dpr * dt; p.vx *= Math.pow(.97, dt); p.vy *= Math.pow(.985, dt);
       p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt; p.giro += p.vg * dt;
-      if (p.y < A.H + 40) { vivos++; dibujar(A.g, p); }
+      if (p.y < A.H + 40 && p.x > -60 && p.x < A.W + 60) { vivos++; dibujar(A.g, p); }
     }
     for (const p of frente) {
-      p.osc += .05 * dt; p.vy = Math.min(p.vy + .06 * dpr * dt, 4.5 * dpr);
-      p.x += (p.vx + Math.sin(p.osc) * 1.2 * dpr) * dt; p.y += p.vy * dt; p.rot += p.vr * dt; p.giro += p.vg * dt;
-      if (p.y < F.H + 40) { vivos++; dibujar(F.g, p); }
+      p.osc += .035 * dt; p.vy = Math.min(p.vy + .04 * dpr * dt, 5 * dpr);
+      p.x += (p.vx + Math.sin(p.osc) * 1.6 * dpr) * dt; p.y += p.vy * dt; p.rot += p.vr * .6 * dt; p.giro += p.vg * dt;
+      if (p.y < F.H + 80) { vivos++; dibujar(F.g, p); }
     }
-    if ((vivos || t - t0 < DUR_LLUVIA) && t - t0 < FIN + 4000) confetiRAF = requestAnimationFrame(paso);
+    // Limpia las piezas que ya salieron de la pantalla
+    if (atras.length > 600) for (let i = atras.length - 1; i >= 0; i--) if (atras[i].y > A.H + 40) atras.splice(i, 1);
+
+    if (vivos || e < LADOS_FULL + LADOS_BAJA) confetiRAF = requestAnimationFrame(paso);
     else detenerConfeti();
   })(t0);
 }
