@@ -39,3 +39,10 @@ El botón **Descargar imagen** genera un PNG sobre `afiche.jpg` con una X verde 
 | `firebase-config.js` | Configuración de tu proyecto de Firebase |
 | `afiche.jpg` | Afiche base para la imagen descargable |
 | `firestore.rules` | Reglas de seguridad de la base de datos |
+
+## Número ganador
+
+En `ganador.js` cambia `null` por el número entre comillas (ej. `export const GANADOR = "42";`) y haz push.
+Al entrar, cualquier persona ve la animación del sorteo después del splash, con el comprador y el vendedor del número, y queda un banner con el ganador encima del tablero.
+
+Para ensayar la animación sin publicar nada: `https://demalor.github.io/Rifa-Agustiniana/?prueba=42`.

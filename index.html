@@ -189,6 +189,43 @@ header .top{display:flex;align-items:center;justify-content:space-between;gap:12
 @keyframes splashFade{from{opacity:0}}
 @keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none}}
 @media (prefers-reduced-motion:reduce){.splash{animation:splashOut .2s linear .8s forwards}.splash-t span,.splash-by{animation:none}}
+
+/* ===== Número ganador ===== */
+.win{position:fixed;inset:0;z-index:60;display:grid;place-items:center;overflow:hidden;
+  background:radial-gradient(120% 80% at 50% 35%,#1d3a8c 0%,var(--bg) 60%,#050d24 100%);
+  padding:calc(20px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  animation:fadeIn .4s ease both}
+.win::before{content:"";position:absolute;inset:-50%;background:repeating-conic-gradient(from 0deg,#ffd31a14 0 10deg,transparent 10deg 20deg);animation:rayos 30s linear infinite;pointer-events:none}
+@keyframes rayos{to{transform:rotate(360deg)}}
+.confeti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.win-in{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2.4vh,18px);text-align:center;width:100%;max-width:560px}
+.win-eyebrow{margin:0;font-size:12px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.win-title{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(30px,9vw,54px);line-height:1;color:var(--yellow);text-transform:uppercase;text-wrap:balance}
+.slots{display:flex;gap:clamp(8px,3vw,16px);margin:clamp(6px,2vh,16px) 0}
+.slot{--h:clamp(120px,36vw,200px);width:calc(var(--h)*.74);height:var(--h);overflow:hidden;border-radius:clamp(14px,4vw,24px);
+  background:linear-gradient(#0a1638,#132a66 50%,#0a1638);border:4px solid var(--yellow);box-shadow:0 0 0 6px #ffd31a33,0 18px 50px #000a,inset 0 0 30px #000c;position:relative}
+.slot::after{content:"";position:absolute;inset:0;background:linear-gradient(#050d24cc,transparent 28%,transparent 72%,#050d24cc);pointer-events:none}
+.reel{display:flex;flex-direction:column;will-change:transform}
+.reel span{height:var(--h);display:grid;place-items:center;font-family:var(--display);font-size:calc(var(--h)*.7);line-height:1;color:#fff;font-variant-numeric:tabular-nums}
+.win.revelado .slot{border-color:#fff;animation:latido 1.2s ease-in-out .2s 3}
+.win.revelado .reel span{color:var(--yellow);text-shadow:0 0 30px #ffd31a99}
+@keyframes latido{50%{transform:scale(1.06)}}
+.win-num-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.win-info{display:flex;flex-direction:column;gap:6px;animation:subirInfo .6s cubic-bezier(.2,.9,.25,1.1) both}
+@keyframes subirInfo{from{opacity:0;transform:translateY(20px)}}
+.win-premio{margin:0;font-size:clamp(15px,4vw,18px);color:var(--fg)} .win-premio b{color:var(--yellow)}
+.win-quien{margin:0;font-family:var(--display);font-size:clamp(24px,7vw,38px);line-height:1.1;color:#fff;text-wrap:balance;overflow-wrap:anywhere}
+.win-sub{margin:0;font-size:14px;color:var(--muted)}
+.win-actions{display:flex;flex-direction:column;gap:10px;width:min(100%,340px);animation:subirInfo .6s .3s cubic-bezier(.2,.9,.25,1.1) both}
+.win-actions .btn{width:100%;padding:15px}
+.win-banner{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;font:inherit;color:var(--ink);
+  background:linear-gradient(100deg,var(--yellow),#ffe773);border:0;border-radius:16px;padding:12px 16px;box-shadow:0 8px 24px #ffd31a33}
+.win-banner:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.wb-l{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;max-width:6em;line-height:1.15}
+.wb-n{font-family:var(--display);font-size:clamp(34px,10vw,46px);line-height:1;font-variant-numeric:tabular-nums}
+.wb-q{flex:1;min-width:0;font-weight:800;font-size:15px;overflow-wrap:anywhere}
+.n.gana{outline:3px solid var(--yellow);outline-offset:2px;box-shadow:0 0 18px #ffd31acc;z-index:1}
+@media (prefers-reduced-motion:reduce){.win::before,.win.revelado .slot{animation:none}}
 </style>
 </head>
 <body>
@@ -221,6 +258,12 @@ header .top{display:flex;align-items:center;justify-content:space-between;gap:12
     </div>
   </header>
 
+  <button class="win-banner" id="winBanner" type="button" hidden>
+    <span class="wb-l">Número ganador</span>
+    <span class="wb-n" id="wbN">--</span>
+    <span class="wb-q" id="wbQ"></span>
+  </button>
+
   <section class="stats" aria-label="Resumen">
     <div class="stat y"><span>Libres</span><strong id="sLibres">100</strong></div>
     <div class="stat g"><span>Pendientes</span><strong id="sPend">0</strong></div>
@@ -248,7 +291,28 @@ header .top{display:flex;align-items:center;justify-content:space-between;gap:12
   <div class="backdrop" id="backdrop"></div>
   <div class="card" id="sheetIn" role="dialog" aria-modal="true" aria-labelledby="shTitle"></div>
 </div>
+<div class="win" id="win" hidden role="dialog" aria-modal="true" aria-labelledby="winTitle">
+  <canvas class="confeti" id="confeti" aria-hidden="true"></canvas>
+  <div class="win-in">
+    <p class="win-eyebrow">Sorteo · 7 de noviembre</p>
+    <h2 class="win-title" id="winTitle">Número ganador</h2>
+    <div class="slots" aria-hidden="true">
+      <div class="slot"><div class="reel" id="reel0"></div></div>
+      <div class="slot"><div class="reel" id="reel1"></div></div>
+    </div>
+    <p class="win-num-sr" id="winSr" aria-live="polite"></p>
+    <div class="win-info" id="winInfo" hidden>
+      <p class="win-premio">Premio <b>$300.000</b> en efectivo</p>
+      <p class="win-quien" id="winQuien"></p>
+      <p class="win-sub" id="winSub"></p>
+    </div>
+    <div class="win-actions" id="winActions" hidden>
+      <button class="btn primary" type="button" id="winVer">Ver tablero</button>
+      <button class="btn ghost" type="button" id="winOtra">Ver sorteo otra vez</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast" hidden></div>
-<script type="module" src="app.js?v=10"></script>
+<script type="module" src="app.js?v=11"></script>
 </body>
 </html>

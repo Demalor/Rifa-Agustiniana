@@ -4,6 +4,7 @@ import {
   getFirestore, collection, doc, onSnapshot, runTransaction, updateDoc, deleteDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=3";
+import { GANADOR as GANADOR_FIJO } from "./ganador.js?v=11";
 
 const PRECIO = 15000;
 const COL = "numeros";
@@ -22,6 +23,8 @@ let vendedorGuardado = "";
 try { vendedorGuardado = localStorage.getItem("rifa.vendedor") || ""; } catch (e) {}
 
 /* ---------- Tablero ---------- */
+let ganadorActual = null;
+const esGanador = n => ganadorActual === n;
 const board = $("board");
 for (let i = 0; i < 100; i++) {
   const b = document.createElement("button");
@@ -42,6 +45,7 @@ function render() {
     b.classList.toggle("pend", e === "pendiente");
     b.classList.toggle("pago", e === "pagado");
     b.classList.toggle("sel", current === n);
+    b.classList.toggle("gana", esGanador(n));
     const hit = !q || (e && ((d.comprador || "") + " " + (d.vendedor || "")).toLowerCase().includes(q));
     b.classList.toggle("dim", !hit);
     b.setAttribute("aria-label", n + (e === "pagado" ? " pagado" : e === "pendiente" ? " pendiente" : " libre") + (d.comprador ? ", " + d.comprador : ""));
@@ -458,6 +462,110 @@ async function sembrar() {
   } catch (e) { console.warn("Semilla no aplicada:", e.code || e.message); }
 }
 
+/* ---------- Número ganador ---------- */
+// Vista previa: agrega ?prueba=42 al link para ensayar la animación sin publicar nada
+const prueba = (() => { try { const v = new URLSearchParams(location.search).get("prueba"); return v && /^\d{1,2}$/.test(v) ? pad(+v) : null; } catch (e) { return null; } })();
+const GANADOR = prueba || (GANADOR_FIJO != null && /^\d{1,2}$/.test(String(GANADOR_FIJO)) ? pad(+GANADOR_FIJO) : null);
+ganadorActual = GANADOR;
+
+function infoGanador() {
+  if (!GANADOR) return;
+  const d = data[GANADOR], e = estado(GANADOR);
+  let quien, sub;
+  if (e) {
+    quien = d.comprador && !/^Del afiche/i.test(d.comprador) ? d.comprador : "¡Felicidades al ganador!";
+    sub = (d.vendedor && d.vendedor !== "—" ? "Vendido por " + d.vendedor + " · " : "") + (e === "pagado" ? "Boleta pagada" : "Boleta pendiente de pago");
+  } else {
+    quien = "Número sin vender";
+    sub = "Este número no fue apartado en el tablero";
+  }
+  $("winQuien").textContent = quien; $("winSub").textContent = sub;
+  $("wbN").textContent = GANADOR; $("wbQ").textContent = e ? quien : "Sin vender";
+}
+
+function armarCarrete(reel, final, vueltas) {
+  const nums = [];
+  for (let v = 0; v < vueltas; v++) for (let i = 0; i < 10; i++) nums.push(i);
+  for (let i = 0; i <= +final; i++) nums.push(i);
+  reel.innerHTML = nums.map(n => `<span>${n}</span>`).join("");
+  reel.style.transition = "none"; reel.style.transform = "translateY(0)";
+  return nums.length - 1;
+}
+
+function girar() {
+  const w = $("win");
+  w.classList.remove("revelado");
+  $("winInfo").hidden = true; $("winActions").hidden = true; $("winSr").textContent = "";
+  const dig = GANADOR.split("");
+  const reels = [$("reel0"), $("reel1")];
+  const dur = reduceMotion ? [0, 0] : [3200, 4600];
+  const idx = reels.map((r, i) => armarCarrete(r, dig[i], reduceMotion ? 0 : 5 + i * 3));
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    reels.forEach((r, i) => {
+      const h = r.parentElement.getBoundingClientRect().height;
+      r.style.transition = `transform ${dur[i]}ms cubic-bezier(.12,.72,.18,1)`;
+      r.style.transform = `translateY(${-idx[i] * h}px)`;
+    });
+  }));
+  setTimeout(() => {
+    w.classList.add("revelado");
+    infoGanador();
+    $("winSr").textContent = "El número ganador es el " + GANADOR;
+    $("winInfo").hidden = false; $("winActions").hidden = false;
+    $("winVer").focus();
+    confeti();
+  }, dur[1] + 150);
+}
+
+function abrirSorteo() {
+  $("win").hidden = false; document.body.classList.add("modal");
+  girar();
+}
+function cerrarSorteo() {
+  $("win").hidden = true; detenerConfeti();
+  if (!current) document.body.classList.remove("modal");
+  $("winBanner").hidden = false;
+}
+
+let confetiRAF = 0;
+function detenerConfeti() { cancelAnimationFrame(confetiRAF); const c = $("confeti"); c.getContext("2d").clearRect(0, 0, c.width, c.height); }
+function confeti() {
+  if (reduceMotion) return;
+  const c = $("confeti"), g = c.getContext("2d"), dpr = Math.min(devicePixelRatio || 1, 2);
+  const W = c.width = innerWidth * dpr, H = c.height = innerHeight * dpr;
+  const colores = ["#ffd31a", "#ffffff", "#22c55e", "#ef4444", "#3b82f6", "#ffe773"];
+  const ps = Array.from({ length: 180 }, (_, i) => ({
+    x: W / 2 + (Math.random() - .5) * W * .2, y: H * .42,
+    vx: (Math.random() - .5) * 26 * dpr, vy: (-Math.random() * 22 - 8) * dpr,
+    r: (4 + Math.random() * 6) * dpr, rot: Math.random() * 6, vr: (Math.random() - .5) * .4,
+    c: colores[i % colores.length], f: Math.random() < .5
+  }));
+  const t0 = performance.now();
+  cancelAnimationFrame(confetiRAF);
+  (function paso(t) {
+    g.clearRect(0, 0, W, H);
+    let vivos = 0;
+    for (const p of ps) {
+      p.vy += .55 * dpr; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      if (p.y < H + 40) vivos++;
+      g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.c;
+      if (p.f) g.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); else { g.beginPath(); g.arc(0, 0, p.r / 1.6, 0, 7); g.fill(); }
+      g.restore();
+    }
+    if (vivos && t - t0 < 7000) confetiRAF = requestAnimationFrame(paso); else g.clearRect(0, 0, W, H);
+  })(t0);
+}
+
+if (GANADOR) {
+  $("winVer").onclick = cerrarSorteo;
+  $("winOtra").onclick = girar;
+  $("winBanner").onclick = abrirSorteo;
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("win").hidden) cerrarSorteo(); });
+  infoGanador();
+  // Arranca justo cuando termina el splash
+  setTimeout(abrirSorteo, reduceMotion ? 900 : 3000);
+}
+
 /* ---------- Arranque ---------- */
 if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith("PEGA")) {
   setStatus("Falta configurar Firebase: pega tu configuración en firebase-config.js (ver README).", true);
@@ -472,6 +580,7 @@ if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWit
       const next = {};
       snap.forEach(d => { next[d.id] = d.data(); });
       data = next;
+      if (GANADOR) infoGanador();
       setStatus("En vivo · se actualiza solo cuando alguien aparta o paga");
       render();
     }, err => setStatus("Se perdió la conexión (" + err.code + "). Recarga la página.", true));
