@@ -470,17 +470,10 @@ ganadorActual = GANADOR;
 
 function infoGanador() {
   if (!GANADOR) return;
-  const d = data[GANADOR], e = estado(GANADOR);
-  let quien, sub;
-  if (e) {
-    quien = d.comprador && !/^Del afiche/i.test(d.comprador) ? d.comprador : "¡Felicidades al ganador!";
-    sub = (d.vendedor && d.vendedor !== "—" ? "Vendido por " + d.vendedor + " · " : "") + (e === "pagado" ? "Boleta pagada" : "Boleta pendiente de pago");
-  } else {
-    quien = "Número sin vender";
-    sub = "Este número no fue apartado en el tablero";
-  }
-  $("winQuien").textContent = quien; $("winSub").textContent = sub;
-  $("wbN").textContent = GANADOR; $("wbQ").textContent = e ? quien : "Sin vender";
+  const d = data[GANADOR] || {};
+  const nombre = estado(GANADOR) && d.comprador && !/^Del afiche/i.test(d.comprador) ? d.comprador : "";
+  $("winQuien").textContent = nombre; $("winQuien").hidden = !nombre;
+  $("wbN").textContent = GANADOR; $("wbQ").textContent = nombre;
 }
 
 function armarCarrete(reel, final, vueltas) {
@@ -527,32 +520,69 @@ function cerrarSorteo() {
   $("winBanner").hidden = false;
 }
 
+// Confeti: una explosión que sale de detrás de los rodillos hacia los lados
+// y una lluvia que cae por delante de toda la pantalla
 let confetiRAF = 0;
-function detenerConfeti() { cancelAnimationFrame(confetiRAF); const c = $("confeti"); c.getContext("2d").clearRect(0, 0, c.width, c.height); }
+const COLORES = ["#ffd31a", "#ffffff", "#22c55e", "#ef4444", "#3b82f6", "#ffe773", "#f472b6"];
+function lienzo(id) {
+  const c = $(id), dpr = Math.min(devicePixelRatio || 1, 2);
+  c.width = innerWidth * dpr; c.height = innerHeight * dpr;
+  return { c, g: c.getContext("2d"), W: c.width, H: c.height, dpr };
+}
+function pieza(x, y, vx, vy, dpr, lluvia) {
+  return { x, y, vx, vy, r: (4 + Math.random() * 6) * dpr, rot: Math.random() * 6, vr: (Math.random() - .5) * .35,
+    giro: Math.random() * 6, vg: .05 + Math.random() * .1, c: COLORES[(Math.random() * COLORES.length) | 0],
+    f: Math.random() < .7, lluvia, osc: Math.random() * 6 };
+}
+function dibujar(g, p) {
+  g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.c;
+  const sx = Math.cos(p.giro); // efecto de papel que voltea
+  if (p.f) g.fillRect(-p.r * sx, -p.r / 2, p.r * 2 * sx, p.r);
+  else { g.beginPath(); g.arc(0, 0, p.r / 1.7, 0, 7); g.fill(); }
+  g.restore();
+}
+function detenerConfeti() {
+  cancelAnimationFrame(confetiRAF);
+  for (const id of ["confeti", "confetiAtras"]) { const c = $(id); c.getContext("2d").clearRect(0, 0, c.width, c.height); }
+}
 function confeti() {
   if (reduceMotion) return;
-  const c = $("confeti"), g = c.getContext("2d"), dpr = Math.min(devicePixelRatio || 1, 2);
-  const W = c.width = innerWidth * dpr, H = c.height = innerHeight * dpr;
-  const colores = ["#ffd31a", "#ffffff", "#22c55e", "#ef4444", "#3b82f6", "#ffe773"];
-  const ps = Array.from({ length: 180 }, (_, i) => ({
-    x: W / 2 + (Math.random() - .5) * W * .2, y: H * .42,
-    vx: (Math.random() - .5) * 26 * dpr, vy: (-Math.random() * 22 - 8) * dpr,
-    r: (4 + Math.random() * 6) * dpr, rot: Math.random() * 6, vr: (Math.random() - .5) * .4,
-    c: colores[i % colores.length], f: Math.random() < .5
-  }));
-  const t0 = performance.now();
   cancelAnimationFrame(confetiRAF);
+  const A = lienzo("confetiAtras"), F = lienzo("confeti"), dpr = A.dpr;
+  const slots = document.querySelector(".slots").getBoundingClientRect();
+  const cx = (slots.left + slots.width / 2) * dpr, cy = (slots.top + slots.height / 2) * dpr;
+  const atras = [], frente = [];
+  // Explosión lateral desde detrás de la tarjeta
+  for (let i = 0; i < 220; i++) {
+    const lado = i % 2 ? 1 : -1;
+    const ang = (Math.random() * 70 - 45) * Math.PI / 180;     // abanico hacia arriba/lados
+    const v = (14 + Math.random() * 22) * dpr;
+    atras.push(pieza(cx + lado * Math.random() * 20 * dpr, cy + (Math.random() - .5) * slots.height * .6 * dpr,
+      lado * Math.cos(ang) * v, -Math.sin(ang + .35) * v, dpr, false));
+  }
+  const t0 = performance.now(), DUR_LLUVIA = 6500, FIN = 9500;
+  let ultimo = t0;
   (function paso(t) {
-    g.clearRect(0, 0, W, H);
-    let vivos = 0;
-    for (const p of ps) {
-      p.vy += .55 * dpr; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
-      if (p.y < H + 40) vivos++;
-      g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.c;
-      if (p.f) g.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); else { g.beginPath(); g.arc(0, 0, p.r / 1.6, 0, 7); g.fill(); }
-      g.restore();
+    const dt = Math.min(2, (t - ultimo) / 16.7); ultimo = t;
+    // Lluvia continua por delante durante unos segundos
+    if (t - t0 < DUR_LLUVIA) {
+      const n = Math.random() < .5 ? 3 : 2;
+      for (let i = 0; i < n; i++) frente.push(pieza(Math.random() * F.W, -20 * dpr, (Math.random() - .5) * 2 * dpr, (2 + Math.random() * 3) * dpr, dpr, true));
     }
-    if (vivos && t - t0 < 7000) confetiRAF = requestAnimationFrame(paso); else g.clearRect(0, 0, W, H);
+    A.g.clearRect(0, 0, A.W, A.H); F.g.clearRect(0, 0, F.W, F.H);
+    let vivos = 0;
+    for (const p of atras) {
+      p.vy += .5 * dpr * dt; p.vx *= Math.pow(.97, dt); p.vy *= Math.pow(.985, dt);
+      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt; p.giro += p.vg * dt;
+      if (p.y < A.H + 40) { vivos++; dibujar(A.g, p); }
+    }
+    for (const p of frente) {
+      p.osc += .05 * dt; p.vy = Math.min(p.vy + .06 * dpr * dt, 4.5 * dpr);
+      p.x += (p.vx + Math.sin(p.osc) * 1.2 * dpr) * dt; p.y += p.vy * dt; p.rot += p.vr * dt; p.giro += p.vg * dt;
+      if (p.y < F.H + 40) { vivos++; dibujar(F.g, p); }
+    }
+    if ((vivos || t - t0 < DUR_LLUVIA) && t - t0 < FIN + 4000) confetiRAF = requestAnimationFrame(paso);
+    else detenerConfeti();
   })(t0);
 }
 
