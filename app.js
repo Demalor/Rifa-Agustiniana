@@ -4,7 +4,7 @@ import {
   getFirestore, collection, doc, onSnapshot, runTransaction, updateDoc, deleteDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js?v=3";
-import { GANADOR as GANADOR_FIJO } from "./ganador.js?v=14";
+import { GANADOR as GANADOR_FIJO } from "./ganador.js?v=15";
 
 const PRECIO = 15000;
 const COL = "numeros";
